@@ -104,7 +104,16 @@ function animate(){
 	getRect(0,0).style('fill', visited);
 	
 	var s = new Stack();
-	var seen = []
+	var seen = [[0,0], [1,1]]
+	
+	/************** testing ****************/
+	console.log(contains(seen, [0,0]));
+	console.log(contains(seen, [1,1]));
+	console.log(contains(seen, [1,2]));
+	
+	/************** end testing ***********/
+	
+	
 	
 	//var loopID = setInterval(dfsLoop, '1500')
 	s.push([0,0]);
@@ -137,44 +146,20 @@ function animate(){
 	function connectAdjacent(i,j,seen){
 		var cur = getRect(i,j);
 		var successors = [];
+		var deltas = [[i-1,j], [i,j-1], [i+1,j], [i,j+1]]
 		
-		//look up
-		if(i-1 >= 0) {
-			var sq = getRect(i-1,j);
-			drawLine(cur,sq);
-			if(!contains(seen, [i-1,j])){
-				sq.style('fill', visited);
+		function inbounds(i,j) { return 0 <= i < gridHeight && 0 <= j < gridWidth; }
+		
+		deltas.forEach(function(delta) {
+			if(inbounds(delta[0], delta[1])){
+				var sq = getRect(delta[0],delta[1]);
+				drawLine(cur,sq);
+				if(!contains(seen, delta)){
+					sq.style('fill', visited);
+				}
+				successors.push(delta);
 			}
-			successors.push([i-1,j]);
-		}
-		//look left
-		if(j-1 >= 0) {
-			var sq = getRect(i,j-1);
-			drawLine(cur,sq);
-			if(!contains(seen, [i,j-1])){
-				sq.style('fill', visited);
-			}
-			successors.push([i,j-1]);
-		}
-		//look down
-		if (i + 1 < gridHeight) {
-			var sq = getRect(i+1,j);
-			drawLine(cur,sq);
-			if(!contains(seen, [i+1,j])){
-				sq.style('fill', visited);
-			}
-			successors.push([i+1,j]);
-			
-		}
-		//look right
-		if(j+1 < gridWidth) {
-			var sq = getRect(i,j+1);
-			drawLine(cur, sq);
-			if(!contains(seen, [i,j+1])){
-				sq.style('fill', visited);
-			}
-			successors.push([i,j+1]);
-		}
+		});
 		return successors;
 	}
 	
@@ -184,11 +169,11 @@ animate();
 
 
 function contains(arr, coord){
-	console.log('coord')
-	console.log(coord);
-	console.log('x');
 	arr.forEach(function(x){
-		console.log(x)
+		console.log(x);
+		console.log(coord);
+		console.log(x[0] == coord[0]);
+		console.log(x[1] == coord[1]);
 		if(x[0] == coord[0] && x[1] == coord[1]){
 			return true;
 		}
