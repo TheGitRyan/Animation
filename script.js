@@ -1,5 +1,5 @@
-var gridHeight = 3;
-var gridWidth = 3;
+var gridHeight = 4;
+var gridWidth = 4;
 var rectHeight = 50;
 var rectWidth = 50;
 
@@ -19,10 +19,10 @@ function gridData(numRows, numCols) {
 	var width = rectWidth;
 	var height = rectHeight;
 	var click = 0;
-	
+
 	for (var row = 0; row < numRows; row++) {
 		data.push( new Array() );
-		
+
 		for (var column = 0; column < numCols; column++) {
 			data[row].push({
 				x: xpos,
@@ -36,12 +36,12 @@ function gridData(numRows, numCols) {
 			xpos += width;
 		}
 		xpos = 1;
-		ypos += height;	
+		ypos += height;
 	}
 	return data;
 }
 
-var gridData = gridData(gridHeight, gridWidth);	
+var gridData = gridData(gridHeight, gridWidth);
 
 var grid = d3.select("#grid")
 	.append("svg")
@@ -53,10 +53,10 @@ var row = grid.selectAll(".row")
 	.enter().append("g")
 	.attr("class", "row");
 
-//append this g after the rows, so that paths will be 
+//append this g after the rows, so that paths will be
 //drawn on top of squares in the future
 grid.append('g').attr('id', 'paths');
-	
+
 var column = row.selectAll(".square")
 	.data(function(d) { return d; })
 	.enter().append("rect")
@@ -97,29 +97,20 @@ function Stack() {
 	}
 }
 
-	
+
 /*************************** ANIMATION ************************/
 
 function animate(){
 	getRect(0,0).style('fill', visited);
-	
-	var s = new Stack();
-	var seen = [[0,0], [1,1]]
-	
-	/************** testing ****************/
-	console.log(contains(seen, [0,0]));
-	console.log(contains(seen, [1,1]));
-	console.log(contains(seen, [1,2]));
-	
-	/************** end testing ***********/
-	
-	
-	
-	//var loopID = setInterval(dfsLoop, '1500')
-	s.push([0,0]);
+
+	var s = new stackAnimator();
+	var seen = [[0,0]]
+
+	var loopID = setInterval(dfsLoop, '1500')
+	s.animatePush([0,0]);
 	function dfsLoop(row, col){
 		if(!s.getLength() == 0){
-			var node = s.pop();
+			var node = s.animatePop();
 			seen.push(node);
 			var i = node[0];
 			var j = node[1];
@@ -127,11 +118,9 @@ function animate(){
 
 			var successors = connectAdjacent(i,j,seen);
 			successors.forEach(function(x){
-				if(!contains(seen, x)){
-					s.push(x); 
-				}
-			})
-			
+				s.animatePush(x);
+			});
+
 			//add animation of stack update
 			setTimeout(function() {
 				d3.selectAll('path').remove();
@@ -142,42 +131,40 @@ function animate(){
 			j++;
 		}
 	}
-		
+
 	function connectAdjacent(i,j,seen){
 		var cur = getRect(i,j);
 		var successors = [];
 		var deltas = [[i-1,j], [i,j-1], [i+1,j], [i,j+1]]
-		
-		function inbounds(i,j) { return 0 <= i < gridHeight && 0 <= j < gridWidth; }
-		
+
+		function inbounds(i,j) { return 0 <= i && i < gridHeight && 0 <= j && j < gridWidth; }
+
 		deltas.forEach(function(delta) {
-			if(inbounds(delta[0], delta[1])){
+			if(inbounds(delta[0], delta[1]) && !contains(seen,delta)){
 				var sq = getRect(delta[0],delta[1]);
 				drawLine(cur,sq);
 				if(!contains(seen, delta)){
 					sq.style('fill', visited);
 				}
 				successors.push(delta);
+				seen.push(delta);
 			}
 		});
 		return successors;
 	}
-	
+
 }
 animate();
 
 
 
 function contains(arr, coord){
-	arr.forEach(function(x){
-		console.log(x);
-		console.log(coord);
-		console.log(x[0] == coord[0]);
-		console.log(x[1] == coord[1]);
+	for(var i = 0; i < arr.length; i++){
+		var x = arr[i];
 		if(x[0] == coord[0] && x[1] == coord[1]){
 			return true;
 		}
-	});
+	};
 	return false;
 }
 
@@ -189,7 +176,7 @@ function drawLine(rect1, rect2) {
 		[getXCenter(rect1), getYCenter(rect1)],
 		[getXCenter(rect1), getYCenter(rect1)]
 	]
-	
+
 	var data = [
 				[getXCenter(rect1), getYCenter(rect1)],
 				[getXCenter(rect2), getYCenter(rect2)]
@@ -206,17 +193,68 @@ function drawLine(rect1, rect2) {
 
 /***************** STACK ANIMATION ************************/
 
-function stackItem(x,y,width,height) {
-	this.x = x;
-	this.y = y;
-	this.width = width;
-	this.height= height;
-}
-
-
 d3.select('#stack')
-  .append('g');
+  .append('svg')
+	.attr("width", rectWidth * gridWidth * gridHeight + 10 + "px")
+  .append('g')
+  .attr('padding', '50px');
 
 
 
+function stackAnimator() {
+	this.stack  = new Stack();
 
+	this.itemWidth = 50;
+	this.itemHeight = 50;
+
+
+	//takes in a tuple [row,col] which get
+	this.animatePush = function(t) {
+		var offSet = this.stack.getLength() * this.itemWidth;
+		var x = offSet + 1;
+		var y = 1;
+
+		//append new a g element which we will add a rect and text too
+		d3.select('#stack').select('g')
+		  .append('g')
+		  .attr('id', 's_' + this.stack.getLength());
+
+	  //append the rectangle into the g DOM wrapper
+		d3.select('#s_' + this.stack.getLength())
+		  .append('rect')
+		  .attr('x', x)
+		  .attr('y', y)
+		  .attr('width', this.itemWidth)
+		  .attr('height', this.itemHeight)
+		  .style("fill", visited)
+		  .style("stroke", "#222");
+
+		//append the text on top of the rectangle into the g DOM element
+		d3.select('#s_' + this.stack.getLength())
+		  .append('text')
+			.attr('x',  x + 7)
+			.attr('y', this.itemHeight / 2)
+			.attr('dy', '.35em')
+			.text('(' + t[0] + ', ' + t[1] + ')');
+
+
+
+		//update the internal stack
+		this.stack.push(t);
+	}
+
+	this.animatePop = function() {
+		//add in the animations for popping an item off of the stack
+		var x = this.stack.pop();
+		d3.select('#s_' + this.stack.getLength()).remove();
+		return x;
+	}
+
+	this.getLength = function() {
+		return this.stack.getLength();
+	}
+
+	this.get =  function(i) {
+		return d3.select('#s_' + i);
+	}
+}
