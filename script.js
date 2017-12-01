@@ -97,8 +97,29 @@ function Stack() {
 	}
 }
 
+function Queue() {
+	  this.array = new Array();
+	  this.push = function(val) {
+	      this.array.push(val);
+	  }
+	  this.pop = function() {
+	      if(this.array.length > 0) {
+	          return this.array.shift();
+	      }
+	  }
+	  this.getLength = function() {
+	      return this.array.length;
+	  }
+}
+
 
 /*************************** ANIMATION ************************/
+//timing controls
+var loop_time = 1500;
+var line_time = 500;
+var line_remove = 2*line_time;
+var buffer = 10;
+
 
 function animate(){
 	getRect(0,0).style('fill', visited);
@@ -106,11 +127,12 @@ function animate(){
 	var s = new stackAnimator();
 	var seen = [[0,0]]
 
-	var loopID = setInterval(dfsLoop, '1500')
+	var loopID = setInterval(dfsLoop, loop_time)
 	s.animatePush([0,0]);
 	function dfsLoop(row, col){
 		if(!s.getLength() == 0){
 			var node = s.animatePop();
+
 			seen.push(node);
 			var i = node[0];
 			var j = node[1];
@@ -121,10 +143,9 @@ function animate(){
 				s.animatePush(x);
 			});
 
-			//add animation of stack update
 			setTimeout(function() {
 				d3.selectAll('path').remove();
-			}, '1000')
+			}, line_remove);
 
 
 			cur.style('fill', explored);
@@ -143,9 +164,9 @@ function animate(){
 			if(inbounds(delta[0], delta[1]) && !contains(seen,delta)){
 				var sq = getRect(delta[0],delta[1]);
 				drawLine(cur,sq);
-				if(!contains(seen, delta)){
+				setTimeout(function() {
 					sq.style('fill', visited);
-				}
+				}, line_time + buffer);
 				successors.push(delta);
 				seen.push(delta);
 			}
@@ -187,7 +208,7 @@ function drawLine(rect1, rect2) {
 	  .attr('stroke-width', '2px')
 	  .attr('stroke',  'black')
 	  .transition()
-	  .duration(500)
+	  .duration(line_time)
 	  .attr('d', line(data));
 }
 
@@ -202,7 +223,7 @@ d3.select('#stack')
 
 
 function stackAnimator() {
-	this.stack  = new Stack();
+	this.stack  = new Queue();
 
 	this.itemWidth = 50;
 	this.itemHeight = 50;
