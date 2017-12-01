@@ -11,6 +11,7 @@ var wall = '#8c8c8c';
 var explored = '#94b6c0';
 var visited = '#BAE4F0';
 var onPath = '#baebae';
+var deleted = 'red'
 
 function gridData(numRows, numCols) {
 	var data = new Array();
@@ -119,13 +120,13 @@ var loop_time = 1500;
 var line_time = 500;
 var line_remove = 2*line_time;
 var buffer = 10;
-
+var pop_time = 500; //time given for poppping animation before rest of loop runs
 
 function animate(){
 	getRect(0,0).style('fill', visited);
 
 	var s = new stackAnimator();
-	var seen = [[0,0]]
+	var seen = []
 
 	var loopID = setInterval(dfsLoop, loop_time)
 	s.animatePush([0,0]);
@@ -133,23 +134,26 @@ function animate(){
 		if(!s.getLength() == 0){
 			var node = s.animatePop();
 
-			seen.push(node);
-			var i = node[0];
-			var j = node[1];
-			var cur = getRect(i,j);
-
-			var successors = connectAdjacent(i,j,seen);
-			successors.forEach(function(x){
-				s.animatePush(x);
-			});
-
+			//this waits while animation for poppig runs
 			setTimeout(function() {
-				d3.selectAll('path').remove();
-			}, line_remove);
+				seen.push(node);
+				var i = node[0];
+				var j = node[1];
+				var cur = getRect(i,j);
+
+				var successors = connectAdjacent(i,j,seen);
+				successors.forEach(function(x){
+					s.animatePush(x);
+				});
+
+				setTimeout(function() {
+					d3.selectAll('path').remove();
+				}, line_remove);
 
 
-			cur.style('fill', explored);
-			j++;
+				cur.style('fill', explored);
+				j++;
+			}, pop_time + buffer);
 		}
 	}
 
@@ -223,7 +227,7 @@ d3.select('#stack')
 
 
 function stackAnimator() {
-	this.stack  = new Queue();
+	this.stack  = new Stack();
 
 	this.itemWidth = 50;
 	this.itemHeight = 50;
@@ -258,8 +262,6 @@ function stackAnimator() {
 			.attr('dy', '.35em')
 			.text('(' + t[0] + ', ' + t[1] + ')');
 
-
-
 		//update the internal stack
 		this.stack.push(t);
 	}
@@ -267,7 +269,24 @@ function stackAnimator() {
 	this.animatePop = function() {
 		//add in the animations for popping an item off of the stack
 		var x = this.stack.pop();
-		d3.select('#s_' + this.stack.getLength()).remove();
+		var node = this.peek();
+		node.select('rect')
+				.transition()
+					.duration(pop_time/2)
+		    .style('fill', deleted)
+				.transition()
+					.duration(pop_time/2)
+				.style('fill', visited);
+		getRect(x[0],x[1])
+				.transition()
+					.duration(pop_time/2)
+		    .style('fill', deleted)
+				.transition()
+					.duration(pop_time/2)
+				.style('fill', explored);
+		setTimeout(function() {
+			node.remove();
+		}, pop_time)
 		return x;
 	}
 
@@ -275,7 +294,7 @@ function stackAnimator() {
 		return this.stack.getLength();
 	}
 
-	this.get =  function(i) {
-		return d3.select('#s_' + i);
+	this.peek =  function() {
+		return d3.select('#s_' + this.stack.getLength());
 	}
 }
